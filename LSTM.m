@@ -1,44 +1,56 @@
-function model = LSTM
+function lstm_model = LSTM
     data = load("data_p1.mat");
     y = data.y;
     u = data.u;
     % Concatenate regressors
     % Split data into train, val and test
-    N_reg = 0; % No es necesario para LSTM, la componente temporal es parte de la estructura
+    N_reg = 1; % No se necesitan más regresores. No hay análisis de sensibilidad
     Z = [];
+    
+    for i=1:N_reg
+        y_i = y(N_reg+1-i:end-1);
+        Z = [Z y_i];
+    end
+    
+    for i=1:N_reg
+        u_i = u(N_reg+1-i:end-i);
+        Z = [Z,u_i];
+    end
+
+    Y = y(N_reg+1:end);
 
     %Split Train, Test, Val
-    n_data = length(y);
-    n_train = ceil(n_data*0.6);n_data = length(Z);
+    n_data = length(Z);
+    n_train = ceil(n_data*0.6);
     n_test = ceil(n_data*0.85);
     
     % Train
-    y_train = y(1:n_train,:);
-    u_train = u(1:n_train,:);
-    
+    Z_train = Z(1:n_train,:);
+    Y_train = Y(1:n_train,:);
+    disp(["Train length data " size(Z_train)]);
     % Test
-    y_test = y(n_train+1:n_test,:);
-    u_test = u(n_train+1:n_test,:);
+    Z_test = Z(n_train+1:n_test,:);
+    Y_test = Y(n_train+1:n_test,:);
     
     % Val
-    y_val = y(n_test+1:end,:);
-    u_val = u(n_test+1:end,:);
+    Z_val = Z(n_test+1:end,:);
+    Y_val = Y(n_test+1:end,:);
         
 
     % Normalize sets
-    y_ntrain = normalize(y_train); % Norma 1
-    u_ntrain = normalize(u_train);
+    Z_ntrain = normalize(Z_train); % Norma 1
+    Y_ntrain = normalize(Y_train);
 
-    y_ntest = normalize(y_test);
-    u_ntest = normalize(u_test);
+    Z_ntest = normalize(Z_test);
+    Y_ntest = normalize(Y_test);
 
-    y_nval = normalize(y_val);
-    u_nval = normalize(u_val);
+    Z_nval = normalize(Z_val);
+    Y_nval = normalize(Y_val);
 
     % Layer Array Neural Networ Architecture
-    numFeatures = size(y_train,2); % ?
+    numFeatures = size(Z_train,2); % ?
     numHiddenUnits = 50;
-    numResponses = size(u_train,2); % ?
+    numResponses = size(Y_train,2); % ?
 
     layers = [ ...
         sequenceInputLayer(numFeatures)
@@ -47,16 +59,20 @@ function model = LSTM
     
     % Training
     options = trainingOptions("adam", ...
-        MaxEpochs=80, ...
-        MiniBatchSize=20, ...
+        MaxEpochs=800, ...
+        MiniBatchSize=60, ...
         InitialLearnRate=0.01, ...
         GradientThreshold=1, ...
         Shuffle="never", ...
         Metrics="rmse", ...
         Plots="training-progress", ...
         Verbose=0, ...
-        ValidationFrequency = 10, ...
-        ValidationData={y_nval,u_nval});
+        ValidationFrequency = 25, ...  % a 1/8 of epochs needed for full test
+        ValidationData={Z_nval,Y_nval}, ...
+        LearnRateSchedule='piecewise', ... % Use piecewise learning rate schedule
+        LearnRateDropFactor= 0.6, ... % Factor to drop learning rate
+        LearnRateDropPeriod= 200)  % Every time it fully goes over train set
         
-    netTrained = trainnet(y_ntrain,u_ntrain,layers,"mse",options);
+    lstm_model = trainnet(Z_ntrain,Y_ntrain,layers,"mse",options);
+    save lstm_model;
 end
