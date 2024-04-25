@@ -52,23 +52,22 @@ function [] = step_analysis(model)
         % Step prediction
         offset = predictionHorizons(i);
         model = resetState(model);
-        numTimeSteps = size(Z_ntest,1);
+        numTimeSteps = size(Z_nval,1);
         numPredictionTimeSteps = numTimeSteps - offset;
-        [Y_pred,state] = predict(model,Z_ntest(1:offset,:));
+        [Y_pred,state] = predict(model,Z_nval(1:offset,:));
         model.State = state;
     
-        Y = zeros(numPredictionTimeSteps);
-        Y(1,:) = Y_pred(end,1);
-
+    
         for t = 1:numPredictionTimeSteps-1
-            Z_ntestt = Z_ntest(offset+t,:);
-            [Y(t+1,:),state] = predict(model,Z_ntestt);
+            Z_nvalt = Z_nval(offset+t,:);
+            [Y(t+1,:),state] = predict(model,Z_nvalt);
             model.State = state;
         end
 
         % Timesteps
-        
-        
+        Y = zeros(numPredictionTimeSteps);
+        Y(1,:) = Y_pred(end,1);
+    
         % Initialize arrays to store performance metrics for each model
         %mseResults = zeros(numel(predictionHorizons), 1);
         %rmseResults = zeros(numel(predictionHorizons), 1);
@@ -80,15 +79,15 @@ function [] = step_analysis(model)
         % Loop over each prediction horizon
         figure
         t = tiledlayout(1,1);
-        title(t,["Open Loop Forecasting for " offset "steps" ])
+        title(t,"Open Loop Forecasting")
     
 
         nexttile
-        plot(Z_ntest(:,1))
+        plot(Z_nval(:,1))
         hold on
         disp(["Offset size" offset])
         disp(["Y size" size(Y(:,1))])
-        plot(offset:numTimeSteps,[Z_ntest(offset,1) Y(:,1)'],"--")
+        plot(offset:numTimeSteps,[Z_nval(offset,1) Y(:,1)'],"--")
         ylabel("Channel " + 1)
 
         
@@ -100,6 +99,7 @@ function [] = step_analysis(model)
         %disp("Prediction Horizon    MSE        RMSE");
         %for i = 1:numel(predictionHorizons)
         %    fprintf("%13d    %8.4f    %8.4f\n", predictionHorizons(i), mseResults(i), rmseResults(i));
+        %end
     end
 end
 
