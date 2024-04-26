@@ -1,5 +1,4 @@
-function [s_up, s_lw] = sintonizacion_fn(data_y, data_y_reg, data_u, data_u_reg, ...
-    model, optim_regs_y, optim_regs_u, CP)
+function [s_up, s_lw] = sintonizacion_fn(data_y, zin,model, CP)
 % sintonizacion_fn calcula los spreads s_sup, s_inf para aplicar el metodo
 % de numeros difusos a un modelo difuso Takagi-Sugeno
 % Variables:
@@ -15,7 +14,6 @@ function [s_up, s_lw] = sintonizacion_fn(data_y, data_y_reg, data_u, data_u_reg,
 % En este ejemplo se utiliza la prediccion para y(k), resultando en un
 % intervalo para y(k). Para generar intervalos a más pasos se debe primero
 % obtener la prediccion a y(k+j)
-zin = [data_y_reg(:, optim_regs_y) data_u_reg(:, optim_regs_u)];
 y_p = ysim(zin, model.a, model.b, model.g);
 
 %% Se inician los parámetros para el problema de optimización

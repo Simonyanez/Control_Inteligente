@@ -50,19 +50,19 @@ function [] = step_analysis(model)
     predictionHorizons = [1, 9, 18];
     for i = 1:length(predictionHorizons)
         % Step prediction
-        offset = predictionHorizons(i);
+        offset = size(Z_ntest);
+        predictionHorizon = predictionHorizons(i);
         model = resetState(model);
         numTimeSteps = size(Z_ntest,1);
-        numPredictionTimeSteps = numTimeSteps - offset;
+        numPredictionTimeSteps = 200;
         [Y_pred,state] = predict(model,Z_ntest(1:offset,:));
         model.State = state;
     
         Y = zeros(numPredictionTimeSteps);
         Y(1,:) = Y_pred(end,1);
 
-        for t = 1:numPredictionTimeSteps-1
-            Z_ntestt = Z_ntest(offset+t,:);
-            [Y(t+1,:),state] = predict(model,Z_ntestt);
+        for t = 2:numPredictionTimeSteps
+            [Y(t+1,:),state] = predict(model,Y(t-predictionHorizon));
             model.State = state;
         end
 
@@ -84,7 +84,7 @@ function [] = step_analysis(model)
     
 
         nexttile
-        plot(Z_ntest(:,1))
+        plot(Z_ntest(1:offset,1))
         hold on
         disp(["Offset size" offset])
         disp(["Y size" size(Y(:,1))])

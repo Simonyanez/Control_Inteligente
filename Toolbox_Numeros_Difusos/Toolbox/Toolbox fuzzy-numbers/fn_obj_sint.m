@@ -24,7 +24,7 @@ s_lw = reshape(s_lw, N_reglas, N_regresores); % Matriz de spreads (N_reglas x N_
 
 % Calcular intervalos de prediccion
 % Aqui se asume que s_up, s_inf son conocidos
-[int_up,int_lw] = calc_intervals(zin, model.a, model.b , ...
+[int_up,int_lw] = calc_intervals(zin, model.a, model.b , model.g, ...
     s_up, s_lw);
 
 y_up = y_p + int_up; % Intervalo superior
@@ -33,7 +33,10 @@ y_lw = y_p - int_lw; % Intervalo inferior
 % Calcular el costo a optimizar
 PINAW = calc_pinaw(y_up, y_lw, data_y);
 PICP = calc_picp(y_up, y_lw, data_y);
-
+%disp(size(PINAW))
+%disp(size(PICP))
+%disp(PINAW);
+%disp(PICP);
 J = param.eta1*PINAW + exp(-param.eta2*(PICP - param.coverage));
-
+%disp(size(J))
 end
