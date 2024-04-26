@@ -1,5 +1,5 @@
 function lstm_model = LSTM
-    data = load("data_p1.mat");
+    data = load("data_p1_v2.mat");
     y = data.y;
     u = data.u;
     % Concatenate regressors
@@ -75,4 +75,6 @@ function lstm_model = LSTM
         
     lstm_model = trainnet(Z_ntrain,Y_ntrain,layers,"mse",options);
     save lstm_model;
+
+    
 end

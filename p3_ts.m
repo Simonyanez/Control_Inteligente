@@ -6,7 +6,7 @@ addpath(".\Toolbox_Numeros_Difusos\Toolbox\Toolbox fuzzy-numbers\")
 %addpath("\Toolbox_NN\")
 %%  
 %Se cargan los datos entrada y salida
-data = load('data_p1.mat');
+data = load('data_p1_v2.mat');
 y = data.y;
 u = data.u;
 
@@ -52,7 +52,9 @@ Y_val = Y(N_test + 1 :end,:);
 [p, indices, ~] = sensibilidad(Y_ent, Z_ent, 18,[1 2 2] );
 %Elegimos los regresores con sensibilidad mayor a 1 en este caso, puede ser
 %un numero distinto dependiendo de como se distribuye la sensibilidad
-gtn_1 = find(indices>1);
+indices_mean = mean(indices);
+gtn_1 = find(indices>indices_mean);
+disp(["Index over mean " gtn_1])
 %Elegimos solo los regresores a ocupar
 Z_optim_ent = Z_ent(:, gtn_1);
 Z_optim_val = Z_val(:, gtn_1);

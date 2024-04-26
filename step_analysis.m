@@ -50,19 +50,48 @@ function [] = step_analysis(model)
     predictionHorizons = [1, 9, 18];
     for i = 1:length(predictionHorizons)
         % Step prediction
-        offset = size(Z_ntest);
+        offset = size(Z_ntest,1);
+        offset = offset(1)
+        disp(["This is offset" offset])
         predictionHorizon = predictionHorizons(i);
         model = resetState(model);
-        numTimeSteps = size(Z_ntest,1);
         numPredictionTimeSteps = 200;
-        [Y_pred,state] = predict(model,Z_ntest(1:offset,:));
+        [Y_pred,state] = predict(model,Z_ntest(1:offset-numPredictionTimeSteps,:)); % 1 - 4800
         model.State = state;
     
-        Y = zeros(numPredictionTimeSteps);
-        Y(1,:) = Y_pred(end,1);
+        Y = zeros(numPredictionTimeSteps,1);
 
-        for t = 2:numPredictionTimeSteps
-            [Y(t+1,:),state] = predict(model,Y(t-predictionHorizon));
+        Y(1,:) = Y_pred(end,1);
+        %U = generate_u_vals(offset,numPredictionTimeSteps);
+        U = Z_ntest(offset-numPredictionTimeSteps+1:offset,2); % Input from 4800 to 5000
+        Z_aux = [];
+
+        disp(["This is U size " size(U)])
+        disp(["This Y size" size(Y)]);
+        
+        Z_ntest_copy = Z_ntest(1:offset-1-numPredictionTimeSteps+predictionHorizon,:);
+        for t = 1:numPredictionTimeSteps-predictionHorizon
+            disp(["This Z size" size(Z_ntest_copy)]);
+            disp(["Index value" offset-numPredictionTimeSteps+t])
+            [Y(t+1,:),state] = predict(model,Z_ntest_copy(offset-1-numPredictionTimeSteps+t,:));
+            if mod(t,predictionHorizon) == 0
+                Z_aux = [];
+                disp("In condition")
+                Y_aux = Y(t:t+predictionHorizon,:);
+                U_aux = U(t:t+predictionHorizon,:);
+                for i=1:N_reg
+                    y_i = Y_aux(N_reg+1-i:end-1);
+                    Z_aux = [Z_aux y_i];
+                end
+                
+                for i=1:N_reg
+                    u_i = U_aux(N_reg+1-i:end-i);
+                    Z_aux = [Z_aux,u_i];
+                    
+                end
+                disp(["Zaux size" size(Z_aux)])
+                Z_ntest_copy = vertcat(Z_ntest_copy,Z_aux);
+            end
             model.State = state;
         end
 
@@ -70,25 +99,31 @@ function [] = step_analysis(model)
         
         
         % Initialize arrays to store performance metrics for each model
-        %mseResults = zeros(numel(predictionHorizons), 1);
-        %rmseResults = zeros(numel(predictionHorizons), 1);
+        mseResults = zeros(numel(predictionHorizons), 1);
+        rmseResults = zeros(numel(predictionHorizons), 1);
     
         % Add more metrics as needed
-        %mse = mean((Y_hor_pred - Y_hor_test).^2, 'all');
-        %rmse = sqrt(mse);
+        disp(offset-numPredictionTimeSteps);
+        disp(["Y size" size(Y)])
+        disp(["Y_pred size" size(Z_ntest(offset-numPredictionTimeSteps:offset,1))])
+        mse = mean((Y(:,1) - Z_ntest(offset-numPredictionTimeSteps+1:offset,1)).^2, 'all');
+        rmse = sqrt(mse);
     
         % Loop over each prediction horizon
+        numTimeSteps = offset + numPredictionTimeSteps;
+        
         figure
         t = tiledlayout(1,1);
-        title(t,["Open Loop Forecasting for " offset "steps" ])
+        title(t,["Open Loop Forecasting for " predictionHorizon "steps" ])
     
 
         nexttile
-        plot(Z_ntest(1:offset,1))
+        plot(Z_ntest(1:offset-numPredictionTimeSteps,1))
         hold on
-        disp(["Offset size" offset])
-        disp(["Y size" size(Y(:,1))])
-        plot(offset:numTimeSteps,[Z_ntest(offset,1) Y(:,1)'],"--")
+        disp(["Offset size" size(Z_ntest(offset,1))])
+        
+        disp([size(offset:numTimeSteps)])
+        plot(offset-numPredictionTimeSteps+1:offset, Y(:,1),"--")
         ylabel("Channel " + 1)
 
         
@@ -96,10 +131,12 @@ function [] = step_analysis(model)
         legend(["Input" "Forecasted"])
                 
         % Display or compare the performance of each model based on the computed metrics
-        %disp("Performance Metrics on Test Set:");
-        %disp("Prediction Horizon    MSE        RMSE");
-        %for i = 1:numel(predictionHorizons)
-        %    fprintf("%13d    %8.4f    %8.4f\n", predictionHorizons(i), mseResults(i), rmseResults(i));
+        disp("Performance Metrics on Test Set:");
+        disp("Prediction Horizon    MSE        RMSE");
+        for i = 1:numel(predictionHorizons)
+           fprintf("%13d    %8.4f    %8.4f\n", predictionHorizons(i), mseResults(i), rmseResults(i));
+    
+        end
     end
 end
 

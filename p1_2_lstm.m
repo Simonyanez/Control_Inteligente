@@ -1,2 +1,3 @@
 load lstm_model.mat
-step_analysis(lstm_model);
+predict_train(lstm_model);
+step_analysis2(lstm_model);
