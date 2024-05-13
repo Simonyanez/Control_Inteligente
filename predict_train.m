@@ -4,8 +4,10 @@ function [] = predict_train(model)
     u = data.u';
     % Concatenate regressors
     % Split data into train, val and test
+    N_reg = 1;
+% Inicializar los regresores como una matriz vacía
     Z = [];
-    N_reg = 1
+    
     % Y
     for i=1:N_reg % índice del regresor
         y_i = y(N_reg+1-i:end-i); % Toma los regresores como ventana deslizante 2 al final-2 y 1 al final-1
@@ -19,9 +21,11 @@ function [] = predict_train(model)
         Z = [Z u_i];
     end
     
+    
     % Target
     Y = y(N_reg+1:end);
 
+%%
     %Split Train, Test, Val
     n_data = length(Z);
     n_train = ceil(n_data*0.6);
@@ -39,16 +43,20 @@ function [] = predict_train(model)
     Z_val = Z(n_test+1:end,:);
     Y_val = Y(n_test+1:end,:);
         
-
-    % Normalize sets
-    Z_ntrain = normalize(Z_train); % Norma 1
-    Y_ntrain = normalize(Y_train);
-
-    Z_ntest = normalize(Z_test);
-    Y_ntest = normalize(Y_test);
-
-    Z_nval = normalize(Z_val);
-    Y_nval = normalize(Y_val);
+    % Normalize by the training set
+    max_z = max(Z_train);
+    min_z = min(Z_train);
+    Z_ntrain = (Z_train - min_z) ./ (max_z - min_z);
+    Z_ntest = (Z_test - min_z) ./ (max_z-min_z);
+    Z_nval = (Z_val - min_z) ./ (max_z - min_z);
+    
+    % Normalize the outputs as well
+    max_y = max(Y_train);
+    min_y = min(Y_train);
+    Y_ntrain = (Y_train - min_y) ./ (max_y - min_y);
+    Y_ntest = (Y_test - min_y) ./ (max_y - min_y);
+    Y_nval = (Y_val - min_y) ./ (max_y - min_y);
+    
     Y_ntrain_pred = predict(model, Z_ntrain);
     
     % Plot the actual training data and the predicted values

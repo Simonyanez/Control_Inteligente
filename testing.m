@@ -1,5 +1,10 @@
-function [] = step_analysis2(model)
-    data = load("data.mat");
+clc
+clear all
+close all
+
+data = load("data.mat");
+load lstm_model.mat;
+model = lstm_model;
     y = data.y;
     u = data.u;
     y=y';
@@ -7,28 +12,20 @@ function [] = step_analysis2(model)
     % Concatenate regressors
     % Split data into train, val and test
     N_reg = 1; % No se necesitan más regresores. No hay análisis de sensibilidad
-    N_reg = 1;
-    % Inicializar los regresores como una matriz vacía
     Z = [];
-    
-    % Y
-    for i=1:N_reg % índice del regresor
-        y_i = y(N_reg+1-i:end-i); % Toma los regresores como ventana deslizante 2 al final-2 y 1 al final-1
-        Z = [Z y_i]; % Concatena el vector con los regresores
+
+    for i=1:N_reg
+        y_i = y(N_reg+1-i:end-1);
+        Z = [Z y_i];
     end
     
-    % U
-    % Se realiza el mismo procedimiento para u
     for i=1:N_reg
         u_i = u(N_reg+1-i:end-i);
-        Z = [Z u_i];
+        Z = [Z,u_i];
     end
-    
-    
-    % Target
+
     Y = y(N_reg+1:end);
 
-    
     %Split Train, Test, Val
     n_data = length(Z);
     n_train = ceil(n_data*0.6);
@@ -37,7 +34,6 @@ function [] = step_analysis2(model)
     % Train
     Z_train = Z(1:n_train,:);
     Y_train = Y(1:n_train,:);
-    disp(["Train length data " size(Z_train)]);
     % Test
     Z_test = Z(n_train+1:n_test,:);
     Y_test = Y(n_train+1:n_test,:);
@@ -46,19 +42,21 @@ function [] = step_analysis2(model)
     Z_val = Z(n_test+1:end,:);
     Y_val = Y(n_test+1:end,:);
         
+
+    % Normalize sets
     % Normalize by the training set
-    max_z = max(Z_train);
-    min_z = min(Z_train);
-    Z_ntrain = (Z_train - min_z) ./ (max_z - min_z);
-    Z_ntest = (Z_test - min_z) ./ (max_z-min_z);
-    Z_nval = (Z_val - min_z) ./ (max_z - min_z);
+    mu = mean(Z_train);
+    sigma = std(Z_train);
+    Z_ntrain = (Z_train - mu) ./ sigma;
+    Z_ntest = (Z_test - mu) ./ sigma;
+    Z_nval = (Z_val - mu) ./ sigma;
     
     % Normalize the outputs as well
-    max_y = max(Y_train);
-    min_y = min(Y_train);
-    Y_ntrain = (Y_train - min_y) ./ (max_y - min_y);
-    Y_ntest = (Y_test - min_y) ./ (max_y - min_y);
-    Y_nval = (Y_val - min_y) ./ (max_y - min_y);
+    mu_y = mean(Y_train);
+    sigma_y = std(Y_train);
+    Y_ntrain = (Y_train - mu_y) ./ sigma_y;
+    Y_ntest = (Y_test - mu_y) ./ sigma_y;
+    Y_nval = (Y_val - mu_y) ./ sigma_y;
 
     % Define the prediction horizons
     predictionHorizons = [1, 9, 18];
@@ -98,6 +96,7 @@ function [] = step_analysis2(model)
                 model.State = state;
                 Y(t+1) = Y_pred(end,:);
                 Z_predict = [Y_pred(end,:) U(t,:)];
+                Z_aux = vertcat(Z_aux,Z_predict);
                 
             % If not in prediction horizon, use predicted data to keep
             % predicting
@@ -105,9 +104,10 @@ function [] = step_analysis2(model)
             else
                 % Este es el error hay que concatenar sobre toda la secuencia inicial
 
-                [Y_pred, state] = predict(model, Z_predict);
+                [Y_pred, state] = predict(model, Z_aux);
                 Y(t+1) = Y_pred(end,:);
-                Z_predict = vertcat(Z_predict,[Y_pred(end,:) U(t,:)]);
+                Z_predict = [Y_pred(end,:) U(t,:)];
+                Z_aux = vertcat(Z_aux,Z_predict);
                 model.State = state;
             end
             
@@ -154,4 +154,3 @@ function [] = step_analysis2(model)
     for i = 1:numel(predictionHorizons)
     fprintf("%13d    %8.4f    %8.4f    %8.4f\n", predictionHorizons(i), mseResults(i), rmseResults(i), maeResults(i));
     end
-end

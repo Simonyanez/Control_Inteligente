@@ -23,9 +23,11 @@ for i=1:N_reg
     Z = [Z u_i];
 end
 
+
 % Target
 Y = y(N_reg+1:end);
 
+%%
     %Split Train, Test, Val
     n_data = length(Z);
     n_train = ceil(n_data*0.6);
@@ -44,22 +46,22 @@ Y = y(N_reg+1:end);
     Y_val = Y(n_test+1:end,:);
         
     % Normalize by the training set
-    mu = mean(Z_train);
-    sigma = std(Z_train);
-    Z_ntrain = (Z_train - mu) ./ sigma;
-    Z_ntest = (Z_test - mu) ./ sigma;
-    Z_nval = (Z_val - mu) ./ sigma;
+    max_z = max(Z_train);
+    min_z = min(Z_train);
+    Z_ntrain = (Z_train - min_z) ./ (max_z - min_z);
+    Z_ntest = (Z_test - min_z) ./ (max_z-min_z);
+    Z_nval = (Z_val - min_z) ./ (max_z - min_z);
     
     % Normalize the outputs as well
-    mu_y = mean(Y_train);
-    sigma_y = std(Y_train);
-    Y_ntrain = (Y_train - mu_y) ./ sigma_y;
-    Y_ntest = (Y_test - mu_y) ./ sigma_y;
-    Y_nval = (Y_val - mu_y) ./ sigma_y;
+    max_y = max(Y_train);
+    min_y = min(Y_train);
+    Y_ntrain = (Y_train - min_y) ./ (max_y - min_y);
+    Y_ntest = (Y_test - min_y) ./ (max_y - min_y);
+    Y_nval = (Y_val - min_y) ./ (max_y - min_y);
 
-    % Layer Array Neural Networ Architecture
+    % Layer Array Neural Network Architecture
     numFeatures = size(Z_train,2); % ?
-    numHiddenUnits = 20;
+    numHiddenUnits = 30;
     numResponses = size(Y_train,2); % ?
 
     layers = [ ...
@@ -67,18 +69,23 @@ Y = y(N_reg+1:end);
         lstmLayer(numHiddenUnits,OutputMode="sequence")
         fullyConnectedLayer(numResponses)];
     
+    % The training data must be sequences of different sizes
+
     % Training
     options = trainingOptions("adam", ...
         MaxEpochs=400, ...
-        MiniBatchSize=25, ...
         InitialLearnRate=0.005, ...
+        GradientThreshold=1,...
         Plots="training-progress", ...
+        SequenceLength = "shortest", ...
+        Shuffle="never", ...
         Verbose=0, ...
-        ValidationFrequency = 25, ...  % a 1/8 of epochs needed for full test
+        ValidationFrequency = 10, ...  % a 1/8 of epochs needed for full test
         ValidationData={Z_ntest,Y_ntest}, ...
         LearnRateSchedule='piecewise', ... % Use piecewise learning rate schedule
         LearnRateDropFactor= 0.2, ... % Factor to drop learning rate
         LearnRateDropPeriod= 50)  % Every time it fully goes over train set
-        
+    
+
     lstm_model = trainnet(Z_ntrain,Y_ntrain,layers,'mse',options);
     save lstm_model;
