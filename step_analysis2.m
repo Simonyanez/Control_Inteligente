@@ -1,7 +1,9 @@
 function [] = step_analysis2(model)
-    data = load("data_p1_v2.mat");
+    data = load("data.mat");
     y = data.y;
     u = data.u;
+    y=y';
+    u=u';
     % Concatenate regressors
     % Split data into train, val and test
     N_reg = 1; % No se necesitan más regresores. No hay análisis de sensibilidad
@@ -97,7 +99,7 @@ function [] = step_analysis2(model)
                     Z_aux = [Z_aux, u_i];
                 end
                 [Y(t+1), state] = predict(model, Z_aux);
-                %model.State = state;
+                model.State = state;
             end
             
         end

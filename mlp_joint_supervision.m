@@ -1,0 +1,90 @@
+close all
+clear
+clc
+addpath(".\Toolbox NN\")
+%%
+% Cargar datos
+data = load("data_p1_v2.mat");
+y = data.y;
+u = data.u;
+
+% Other sets
+sets = load("sens_Z.mat");
+Z_test_norm = sets.Z_test_norm;
+Z_train_norm = sets.Z_train_norm;
+Z_val_norm = sets.Z_val_norm;
+
+Y = y(20+1:end);
+% Y splits
+n_data = length(y);
+n_train = size(Z_train_norm,1);
+n_test = size(Z_test_norm, 1);
+Y_train = Y(1:n_train,:);
+Y_test = Y(n_train+1:n_test,:);
+Y_val = Y(n_test+1:end,:);
+
+% Target
+Y_train_min = min(Y_train);
+Y_train_max = max(Y_train);
+y_diff = Y_train_max - Y_train_min; ceil(n_data*0.85);
+Y_train_norm = (Y_train - Y_train_min)./y_diff;
+Y_test_norm = (Y_test- Y_train_min)./y_diff;
+
+
+%%
+% Create neural network architecture
+% Assuming Z_train_norm is 5390x13 and Y_train_norm is the corresponding target data
+
+% Create neural network architecture
+layers = [
+    featureInputLayer(13)
+    fullyConnectedLayer(10)
+    reluLayer
+    fullyConnectedLayer(3) % Output layer with 3 neurons
+    ];
+
+% Create neural network model
+nn = dlnetwork(layers);
+
+% Initialize optimization parameters
+learnableParams = dlarray(randn(numel(nn.Learnables), 1), 'CB');
+velocity = dlarray(zeros(numel(nn.Learnables), 1), 'CB');
+learnRate = 0.01;
+momentum = 0.9;
+numEpochs = 1000;
+
+% Training loop
+for epoch = 1:numEpochs
+    % Iterate through each data point sequentially
+    dlYpred_epoch = zeros(3,size(Z_train_norm, 1));
+    dlY_epoch = zeros(1,size(Z_train_norm, 1));
+    for idx = 1:size(Z_train_norm, 1)
+        % Extract input and target data point
+        X_point = Z_train_norm(idx, :)';
+        Y_point = Y_train_norm(idx, :)';
+        
+        % Convert data point to dlarray
+        dlX = dlarray(X_point, 'CB');
+        dlY = dlarray(Y_point, 'CB');
+        
+        % Forward pass
+        dlYPred = predict(nn, dlX);
+
+        dlYpred_epoch(:,idx) = predict(nn,dlX);
+        dlY_epoch(:,idx) = dlY;
+    end
+
+    % Compute individual losses
+    [loss_upper, loss_crisp, loss_lower] = js_loss(dlYPred, dlY);
+    
+    % Compute gradients for each loss separately
+    gradients_upper = dlgradient(loss_upper, nn.Learnables);
+    gradients_crisp = dlgradient(loss_crisp, nn.Learnables);
+    gradients_lower = dlgradient(loss_lower, nn.Learnables);
+    
+    % Update network parameters using custom update function (SGDM) separately for each loss
+    [nn.Learnables, velocity] = sgdmupdate(nn.Learnables, gradients_upper, velocity, learnRate, momentum);
+    [nn.Learnables, velocity] = sgdmupdate(nn.Learnables, gradients_crisp, velocity, learnRate, momentum);
+    [nn.Learnables, velocity] = sgdmupdate(nn.Learnables, gradients_lower, velocity, learnRate, momentum);
+    
+end

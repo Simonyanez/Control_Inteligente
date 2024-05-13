@@ -1,22 +1,25 @@
 function [] = predict_train(model)
-    data = load("data_p1_v2.mat");
-    y = data.y;
-    u = data.u;
+    data = load("data.mat");
+    y = data.y';
+    u = data.u';
     % Concatenate regressors
     % Split data into train, val and test
-    N_reg = 1; % No se necesitan más regresores. No hay análisis de sensibilidad
     Z = [];
-    
-    for i=1:N_reg
-        y_i = y(N_reg+1-i:end-1);
-        Z = [Z y_i];
+    N_reg = 1
+    % Y
+    for i=1:N_reg % índice del regresor
+        y_i = y(N_reg+1-i:end-i); % Toma los regresores como ventana deslizante 2 al final-2 y 1 al final-1
+        Z = [Z y_i]; % Concatena el vector con los regresores
     end
     
+    % U
+    % Se realiza el mismo procedimiento para u
     for i=1:N_reg
         u_i = u(N_reg+1-i:end-i);
-        Z = [Z,u_i];
+        Z = [Z u_i];
     end
-
+    
+    % Target
     Y = y(N_reg+1:end);
 
     %Split Train, Test, Val

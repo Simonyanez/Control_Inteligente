@@ -1,7 +1,8 @@
 close all
 clear
 clc
-addpath(".\Toolbox NN\")
+%%
+addpath("Toolbox_TS_y_MLP/Toolbox NN/")
 %%
 % Cargar datos
 data = load("data_p1_v2.mat");
@@ -93,6 +94,7 @@ reg_opt = find(indices>mu); % Descartar las variables que no tienen mu
 Z_train_norm = Z_train_norm(:,reg_opt);
 Z_test_norm = Z_test_norm(:,reg_opt);
 Z_val_norm =  Z_val_norm(:,reg_opt);
+save("sens_Z.mat", "Z_train_norm", "Z_test_norm","Z_val_norm")
 %% Determinar hidden size óptimo
 
 N_hidden_max = 200; % Nro. máximo de neuronas en capa oculta
@@ -127,6 +129,7 @@ nn.trainParam.showWindow = 0;
 nn.trainFcn = 'traingdx';
 nn.trainParam.epochs = 1000;
 nn = train(nn, Z_train_norm', Y_train_norm', 'useParallel', 'no');
+
 %%
 rmse_final = rmse(nn(Z_test_norm')',Y_test_norm);
 %% Predicción a pasos
