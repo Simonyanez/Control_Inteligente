@@ -75,8 +75,7 @@ function [] = step_analysis2(model)
         % Reset state of model
         model = resetState(model);
         numPredictionTimeSteps = 600;
-        Z_aux =  Z_nval(1:total_data-numPredictionTimeSteps,:);
-        [Y_pred,state] = predict(model, Z_nval(1:total_data-numPredictionTimeSteps,:)); % Predict using initial data
+        [Y_pred,state] = predict(model, Z_nval(1:total_data-numPredictionTimeSteps-predictionHorizon,:)); % Predict using initial data
         model.State = state;
         
         % Store predicted data
@@ -84,33 +83,25 @@ function [] = step_analysis2(model)
         Y(1) = Y_pred(end); % Initialize first prediction
         
         % Input data for prediction go on. Independant of prediction
-        U = Z_nval(total_data-numPredictionTimeSteps+1:total_data, 2); % Input from 4800 to 5000
+        U = Z_nval(total_data-numPredictionTimeSteps-predictionHorizon-1:total_data, 2); % Input from 4800 to 5000
         
         % Needed for first iteration total_data - numpredictions + horizon
         % so it has sufficient data before
-
-        for t = 1:numPredictionTimeSteps
-            % If over in prediction horizon use actual data to predict
-            if mod(t,predictionHorizon)==0 || t==1
-                Z_aux = Z_nval(1:total_data-numPredictionTimeSteps+t,:);
-                [Y_pred, state] = predict(model, Z_aux);
-                model.State = state;
-                Y(t+1) = Y_pred(end,:);
-                Z_predict = [Y_pred(end,:) U(t,:)];
-                
-            % If not in prediction horizon, use predicted data to keep
-            % predicting
-            % Entregar la secuencia entera con los datos predichos
-            else
-                % Este es el error hay que concatenar sobre toda la secuencia inicial
-
-                [Y_pred, state] = predict(model, Z_predict);
-                Y(t+1) = Y_pred(end,:);
-                Z_predict = vertcat(Z_predict,[Y_pred(end,:) U(t,:)]);
-                model.State = state;
-            end
             
+        for t = 1:numPredictionTimeSteps
+            Z_aux = Z_nval(total_data-numPredictionTimeSteps-predictionHorizon-1+t, :);
+            for j = 1:predictionHorizon
+                [Y_pred,state] = predict(model,Z_aux);
+                model.State = state;
+                Z_aux = [Y_pred U(t+j,:)];
+
+                if j == predictionHorizon
+                    Y(t+1) = Y_pred;
+                end
+            end
         end
+            
+        
         % Initialize arrays to store performance metrics for each model
         disp(["This is the Y size" size(Y)])
         
@@ -121,7 +112,7 @@ function [] = step_analysis2(model)
         
         figure
         t = tiledlayout(1,1);
-        title(t,["Pronóstico a lazo abierto para " num2str(predictionHorizon) " pasos" ])
+        title(t,["Pronóstico a lazo cerrado para " num2str(predictionHorizon) " pasos" ])
     
 
         nexttile
@@ -138,11 +129,11 @@ function [] = step_analysis2(model)
         legend(["Real" "Pronosticado"])
                 
         % Display or compare the performance of each model based on the computed metrics
-        Y_nval = Z_nval(total_data-numPredictionTimeSteps:total_data,1);
+        %Y_nval = Z_nval(total_data-numPredictionTimeSteps+1:total_data,1);
         figure;
         plot(Y(:,1), 'Color', 'r', 'LineWidth', 0.5); % Plot predicted values as orange curve
         hold on;
-        scatter(1:length(Y_nval), Y_nval, 5,'bo', 'filled'); % Plot real values as blue points
+        scatter(1:length(Y_nval(total_data - numPredictionTimeSteps:end)), Y_nval(total_data - numPredictionTimeSteps:end), 5,'bo', 'filled'); % Plot real values as blue points
         xlabel('Muestra');
         ylabel('Salida');
         legend('Predecido', 'Real');
