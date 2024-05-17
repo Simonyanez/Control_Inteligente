@@ -44,18 +44,18 @@ function [] = predict_train(model)
     Y_val = Y(n_test+1:end,:);
         
     % Normalize by the training set
-    max_z = max(Z_train);
-    min_z = min(Z_train);
-    Z_ntrain = (Z_train - min_z) ./ (max_z - min_z);
-    Z_ntest = (Z_test - min_z) ./ (max_z-min_z);
-    Z_nval = (Z_val - min_z) ./ (max_z - min_z);
+    mean_z = mean(Z_train);
+    std_z = std(Z_train);
+    Z_ntrain = (Z_train - mean_z) ./ std_z;
+    Z_ntest = (Z_test - mean_z) ./ std_z;
+    Z_nval = (Z_val - mean_z) ./ std_z;
     
     % Normalize the outputs as well
-    max_y = max(Y_train);
-    min_y = min(Y_train);
-    Y_ntrain = (Y_train - min_y) ./ (max_y - min_y);
-    Y_ntest = (Y_test - min_y) ./ (max_y - min_y);
-    Y_nval = (Y_val - min_y) ./ (max_y - min_y);
+    mean_y = mean(Y_train);
+    std_y = std(Y_train);
+    Y_ntrain = (Y_train - mean_y) ./ std_y;
+    Y_ntest = (Y_test - mean_y) ./ std_y;
+    Y_nval = (Y_val - mean_y) ./ std_y;
     
     Y_ntrain_pred = predict(model, Z_ntrain);
     

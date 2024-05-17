@@ -107,7 +107,7 @@ function [] = step_analysis2(model)
                 [Y_pred, state] = predict(model, Z_predict);
                 Y(t+1) = Y_pred(end,:);
                 Z_predict = vertcat(Z_predict,[Y_pred(end,:) U(t,:)]);
-                model.State = state;
+                %model.State = state;
             end
             
         end
