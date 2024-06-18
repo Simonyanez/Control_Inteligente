@@ -3,23 +3,24 @@ clear
 clc
 %%
 % Definimos la referencia
+k_reg = 1;
 nsteps = 10;
-total_time = 150;
-r = zeros(total_time+nsteps+1,1);
+total_time = 151;
+r = zeros(total_time+k_reg,1);
 r(1:51) = 0.8;
 r(102:end) = 1.5;
 %%
 rng('default')
-lamb_1 = 1e-2;
+lamb_1 = 0.35;
 
 % Construcción de los vectores y(k), u(k), beta(k)
-y = zeros(total_time+nsteps+1,1);
-u = zeros(total_time+nsteps+1,1);
+y = zeros(total_time+k_reg+1,1);
+u = zeros(total_time+k_reg+1,1);
 beta = normrnd(0,0.1,size(y));
 
 % Cotas inferior y superior
-lb = -2*ones(10,1);
-ub = 2*ones(10,1);
+lb = -2*ones(nsteps,1);
+ub = 2*ones(nsteps,1);
 
 
 T = zeros(total_time+1,1);
@@ -31,32 +32,31 @@ Aeq = [];
 beq = [];
 noncon = [];
 
-options = optimoptions('ga','Display','iter');
-costos = zeros(total_time+1,1);
-for j=3:total_time+1 
+options = optimoptions('ga','Display','iter','CreationFcn','gacreationuniform','CrossoverFcn','crossoverarithmetic','SelectionFcn','selectionroulette');
+costos = zeros(total_time,1);
+for j=2:total_time+1
     % Inicio de conteo de tiempo
     tic
     % Función objetivo
-    costo = @(u_k) cost_function_J(y,u,u_k',r,beta,lamb_1,j,nsteps);
+    costo = @(u_k) cost_function_J(y,u,u_k',r(j),lamb_1,j,nsteps);
     % Optimización
     [u_opt, fval] = ga(costo,10,A,b,Aeq,beq,lb,ub,noncon,options);
     % Tiempo de optimización
     T(j) = toc;
     % Costo actual
-    costos(j) = fval;
+    costos(j-1) = fval;
     % u(t) =  u(t|t)
     u(j) = u_opt(1);
     % Actualiza la salida
-    y(j) = (0.8 - 0.5*exp(-y(j-1)^2))*y(j-1) + (0.3-0.9*exp(-y(j-1)^2))*y(j-2) + ...
-    u(j-1) + 0.2*u(j-2) + 0.1*u(j-1)*u(j-2) + 0.5*exp(-y(j-1)^2)*beta(j);
+    y(j+1) = (0.8 - 0.5*exp(-y(j)^2))*y(j) + (0.3-0.9*exp(-y(j)^2))*y(j-1) + ...
+    u(j) + 0.2*u(j-1) + 0.1*u(j)*u(j-1) + 0.5*exp(-y(j)^2)*beta(j+1);
 end
 %%
-costos = costos(3:end);
-y = y(1:end-nsteps);
-r = r(1:end-nsteps);
-u = u(1:end-nsteps);
-
-
+y = y(2:end-1);
+r = r(2:end-1);
+u = u(2:end-1);
+T = T(2:end);
+costos = costos(2:end);
 %% Gráficos
 
 figure(1)
@@ -80,7 +80,7 @@ ylabel("Valor de entrada [u.a]")
 
 %%
 figure(3)
-plot(costos(3:end))
+plot(costos)
 grid("on")
 title(["Costo para algoritmo genético, valor de \lambda=",num2str(lamb_1)]);
 xlabel("Muestra")
